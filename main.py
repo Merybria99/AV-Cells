@@ -1,4 +1,6 @@
 import csv
+import math
+from cmath import sqrt
 import os
 
 import cv2 as cv
@@ -30,7 +32,7 @@ def get_correct_number_of_cells( dir ):
     return occurrences
 
 
-def train():
+def train( kernel_erode_size=3, kernel_dilate_size=3, kernel_size=3, preprocessing_op='erode' ):
     found_cells = dict()
     for images in os.listdir(directory):
         # check if the image ends with png
@@ -38,9 +40,12 @@ def train():
 
             image_path = directory + images
             string = (str(images).split('.png')[0]).split('/')[-1]
-            print(string)
             image = cv.imread(image_path)
-            th, new_contours, contours, hierarchy, out = connected_components.connected_component_img(image)
+            th, new_contours, contours, hierarchy, out = connected_components.connected_component_img(image,
+                                                                                                      kernel_erode_size,
+                                                                                                      kernel_dilate_size,
+                                                                                                      kernel_size,
+                                                                                                      preprocessing_op)
 
             found_cells[string] = len(new_contours)
 
@@ -49,7 +54,7 @@ def train():
             for new_contour in new_contours:
                 area = area + cv.contourArea(new_contour)
 
-            print(str(area / len(new_contour)) + ' area media')
+            # print(str(area / len(new_contour)) + ' area media')
 
             # visualizzazione con baricentro
             for contour in new_contours:
@@ -62,23 +67,26 @@ def train():
 
             cv.imshow('Thresholded', th)
             cv.imshow('Connected components', out)
-            cv.waitKey(2000)
+            cv.waitKey(1)
             cv.destroyAllWindows()
 
     return found_cells
 
 
-def test():
+def test( kernel_erode_size=3, kernel_dilate_size=3, kernel_size=3, preprocessing_op='erode' ):
     found_cells = dict()
     for images in os.listdir(test_directory):
-        print(images)
         if (images.endswith(".bmp")) and '_mask' not in images:
 
             image_path = test_directory + images
             string = (str(images).split('.bmp')[0]).split('/')[-1]
             image = cv.imread(image_path)
-            th, new_contours, contours, hierarchy, out = connected_components.connected_component_img(image)
+            th, new_contours, contours, hierarchy, out = connected_components.connected_component_img(image,
+                                                                                                      kernel_erode_size,
+                                                                                                      kernel_dilate_size,
+                                                                                                      operation_type=preprocessing_op)
 
+            print('cellule trovate: '+ str(len(new_contours)))
             found_cells[string] = len(new_contours)
 
             # calcolo dell'area
@@ -99,28 +107,52 @@ def test():
 
             cv.imshow('Thresholded', th)
             cv.imshow('Connected components', out)
-            cv.waitKey(500)
+            cv.waitKey(1)
             cv.destroyAllWindows()
     return found_cells
 
 
 if __name__ == "__main__":
-    total_performances = list()
+    total_performances = dict()
     performances = dict()
     """
         training part
-        cells=training()
-        expected_cells = get_correct_number_of_cellules(directory)
-        for key in cells:
-            performances[key] = expected_cells[key] - cells[key]
-        print(performances)
-    """
+    
+    preprocessing_operations = ['erode', 'erode-dilate', 'dilate', 'erode-dilate']
+    kernel_sizes = [3, 5, 7, 9, 11, 13]
 
+    for op in preprocessing_operations:
+        for kernel_size in kernel_sizes:
+
+            cells = train(kernel_erode_size=kernel_size, kernel_dilate_size=kernel_size, kernel_size=kernel_size,
+                          preprocessing_op=op)
+            expected_cells = get_correct_number_of_cells(directory)
+            std_dev = 0
+            for key in cells:
+                difference = expected_cells[key] - cells[key]
+                print(difference)
+                performances[key] = difference
+                std_dev = std_dev + (difference * difference)
+            total_performances[str(op) + '_' + str(kernel_size)] = sqrt(int(std_dev))
+
+    print("statistiche finali")
+    min = ''
+    min_value = math.inf
+    for key in total_performances:
+        print('performance : ' + key)
+        print(total_performances[key])
+        print('\n')
+        if total_performances[key].real < min_value:
+            min = key
+            min_value = total_performances[key].real
+
+    print('best configuration : ' + min)
+    """
     """
         test part
-        cells = test()
-        expected_cells = get_correct_number_of_cellules(test_directory)
-        for key in cells:
-            performances[key] = expected_cells[key] - cells[key]
-        print(performances)
     """
+    cells = test(kernel_erode_size=13, kernel_dilate_size=13, preprocessing_op='erode-dilate')
+    expected_cells = get_correct_number_of_cells(test_directory)
+    for key in cells:
+        performances[key] = expected_cells[key] - cells[key]
+    print(performances)
