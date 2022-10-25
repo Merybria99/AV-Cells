@@ -32,7 +32,7 @@ def get_correct_number_of_cells( dir ):
     return occurrences
 
 
-def train( kernel_erode_size=3, kernel_dilate_size=3, kernel_size=3, preprocessing_op='erode' ):
+def train( kernel_erode_size=3, kernel_dilate_size=3, kernel_size=3, preprocessing_op='erode'):
     found_cells = dict()
     for images in os.listdir(directory):
         # check if the image ends with png
@@ -118,7 +118,7 @@ if __name__ == "__main__":
     """
         training part
     
-    preprocessing_operations = ['erode', 'erode-dilate', 'dilate', 'erode-dilate']
+    preprocessing_operations = ['erode', 'erode-dilate', 'dilate', 'open']
     kernel_sizes = [3, 5, 7, 9, 11, 13]
 
     for op in preprocessing_operations:
